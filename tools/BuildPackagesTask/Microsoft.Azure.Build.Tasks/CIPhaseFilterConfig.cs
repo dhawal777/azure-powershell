@@ -12,16 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+using System.Collections.Generic;
 
 namespace Microsoft.WindowsAzure.Build.Tasks
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Text;
-    using YamlDotNet.Serialization;
-    using YamlDotNet.Serialization.NamingConventions;
-
-    class CIStepFilterConfig
+    class CIPhaseFilterConfig
     {
         public List<Rule> Rules { get; set; }
     }
@@ -29,6 +24,6 @@ namespace Microsoft.WindowsAzure.Build.Tasks
     class Rule
     {
         public List<string> Patterns { get; set; }
-        public List<string> Steps { get; set; }
+        public List<string> Phases { get; set; }
     }
 }

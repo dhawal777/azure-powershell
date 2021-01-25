@@ -11,9 +11,8 @@ namespace Microsoft.WindowsAzure.Build.Tasks
 {
     public class CIFilterTaskResult : ITaskItem
     {
-        string _spec = "12312365456";
-        public Dictionary<string, HashSet<string>> Step = new Dictionary<string, HashSet<string>>();
-
+        readonly string _spec = "CIFilterTaskResult";
+        public Dictionary<string, HashSet<string>> PhaseInfo = new Dictionary<string, HashSet<string>>();
 
         public string ItemSpec
         {
@@ -25,21 +24,21 @@ namespace Microsoft.WindowsAzure.Build.Tasks
         {
             get
             {
-                return Step.Keys;
+                return PhaseInfo.Keys;
             }
         }
         public int MetadataCount
         {
-            get { return Step.Keys.Count; }
+            get { return PhaseInfo.Keys.Count; }
         }
 
         public IDictionary CloneCustomMetadata()
         {
             Dictionary<string, string> Result = new Dictionary<string, string>();
 
-            foreach (string key in Step.Keys)
+            foreach (string key in PhaseInfo.Keys)
             {
-                Result[key] = string.Join(";", Step[key].ToList());
+                Result[key] = string.Join(";", PhaseInfo[key].ToList());
             }
 
             return Result;
@@ -51,7 +50,7 @@ namespace Microsoft.WindowsAzure.Build.Tasks
 
         public string GetMetadata(string metadataName)
         {
-            return string.Format("[{0}]", string.Join(", ", Step[metadataName].ToList()));
+            return string.Format("[{0}]", string.Join(", ", PhaseInfo[metadataName].ToList()));
         }
 
         public void RemoveMetadata(string metadataName)

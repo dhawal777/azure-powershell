@@ -109,7 +109,6 @@ namespace Microsoft.WindowsAzure.Build.Tasks
             if (csprojMap.ContainsKey(moduleName))
             {
                 csprojList.AddRange(csprojMap[moduleName]);
-                //Serilog.Log.Debug(string.Format("{0}: [{1}]", moduleName, string.Join(", ", csprojList)));
             }
             else
             {
@@ -121,7 +120,6 @@ namespace Microsoft.WindowsAzure.Build.Tasks
                         csprojList.AddRange(csprojMap[key]);
                     }
                 }
-                //Serilog.Log.Debug(string.Format("{0}: [{1}]", moduleName, string.Join(", ", csprojList)));
             }
 
             return csprojList;
@@ -203,13 +201,14 @@ namespace Microsoft.WindowsAzure.Build.Tasks
                 [TEST_PHASE] = new HashSet<string>(from x in GetTestCsprojList(TargetModule, csprojMap).ToList() select x)
             };
 
+            Serilog.Log.Information("----------------- InfluencedModuleInfo -----------------");
             foreach (string phaseName in influencedModuleInfo.Keys)
             {
-                Serilog.Log.Information("-----------------------------------");
                 Serilog.Log.Information(string.Format("{0}: [{1}]", phaseName, string.Join(", ", influencedModuleInfo[phaseName].ToList())));
             }
+            Serilog.Log.Information("--------------------------------------------------------");
 
-            FilterTaskResult.Step = influencedModuleInfo;
+            FilterTaskResult.PhaseInfo = influencedModuleInfo;
             
             return true;
         }
@@ -219,32 +218,34 @@ namespace Microsoft.WindowsAzure.Build.Tasks
             return pattern.Replace("**", ".*").Replace("{ModuleName}", "(?<ModuleName>[^/]+)");
         }
 
-        private Dictionary<string, HashSet<string>> CalculateModuleNameForEachStep(List<(Regex, List<string>)> ruleList, Dictionary<string, string[]> csprojMap)
+        private Dictionary<string, HashSet<string>> CalculateInfluencedModuleInfoForEachPhase(List<(Regex, List<string>)> ruleList, Dictionary<string, string[]> csprojMap)
         {
             Dictionary<string, HashSet<string>> influencedModuleInfo = new Dictionary<string, HashSet<string>>();
 
             foreach (string filePath in FilesChanged)
             {
-                List<string> steps = new List<string>();
+                List<string> phaseList = new List<string>();
                 bool isMatched = false;
                 string machedModuleName = "";
-                foreach ((Regex regex, List<string> ruleSteps) in ruleList)
+                foreach ((Regex regex, List<string> phaseConfigList) in ruleList)
                 {
                     var regexResult = regex.Match(filePath);
                     if (regexResult.Success)
                     {
-                        steps = ruleSteps;
+                        phaseList = phaseConfigList;
                         isMatched = true;
                         if (regexResult.Groups[MODULE_NAME_PLACEHOLDER].Success)
                         {
                             machedModuleName = regexResult.Groups[MODULE_NAME_PLACEHOLDER].Value;
                         }
+                        Serilog.Log.Debug(string.Format("File {0} match rule: {1} and phaseConfig is: [{2}]", filePath, regex.ToString(), string.Join(", ", phaseConfigList)));
                         break;
                     }
                 }
                 if (!isMatched)
                 {
-                    steps = new List<string>()
+                    Serilog.Log.Warning(string.Format("File {0} doesn't match any rule, goto fallback logic.", filePath));
+                    phaseList = new List<string>()
                     {
                         BUILD_PHASE + ":" + AllModule,
                         ANALYSIS_BREAKING_CHANGE_PHASE + ":" + AllModule,
@@ -254,10 +255,10 @@ namespace Microsoft.WindowsAzure.Build.Tasks
                         TEST_PHASE + ":" + AllModule,
                     };
                 }
-                foreach (string step in steps)
+                foreach (string phase in phaseList)
                 {
-                    string phaseName = step.Split(':')[0];
-                    string scope = step.Split(':')[1];
+                    string phaseName = phase.Split(':')[0];
+                    string scope = phase.Split(':')[1];
                     HashSet<string> scopes = influencedModuleInfo.ContainsKey(phaseName) ? influencedModuleInfo[phaseName] : new HashSet<string>();
                     if (!scopes.Contains(AllModule))
                     {
@@ -291,7 +292,7 @@ namespace Microsoft.WindowsAzure.Build.Tasks
                                 scopes.Add(scope);
                             }
                         }
-                        influencedModuleInfo[stepName] = scopes;
+                        influencedModuleInfo[phaseName] = scopes;
                     }
                 }
             }
@@ -302,11 +303,12 @@ namespace Microsoft.WindowsAzure.Build.Tasks
                     influencedModuleInfo[phaseName] = new HashSet<string>(GetDependenceModuleList(AllModule, csprojMap));
                 }
             }
+            Serilog.Log.Information("----------------- InfluencedModuleInfo -----------------");
             foreach (string phaseName in influencedModuleInfo.Keys)
             {
-                Serilog.Log.Information("-----------------------------------");
                 Serilog.Log.Information(string.Format("{0}: [{1}]", phaseName, string.Join(", ", influencedModuleInfo[phaseName].ToList())));
             }
+            Serilog.Log.Information("--------------------------------------------------------");
 
             return influencedModuleInfo;
         }
@@ -360,26 +362,26 @@ namespace Microsoft.WindowsAzure.Build.Tasks
             string configPath = Path.GetFullPath(TaskMappingConfigName);
             if (!File.Exists(configPath))
             {
-                throw new Exception("CI step config is not found!");
+                throw new Exception("CI phase config is not found!");
             }
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(new CamelCaseNamingConvention())
                 .Build();
             string content = File.ReadAllText(configPath);
 
-            CIStepFilterConfig config = deserializer.Deserialize<CIStepFilterConfig>(content);
-            List<(Regex, List<string>)> ruleList = config.Rules.Select(rule => (new Regex(string.Join("|", rule.Patterns.Select(ProcessSinglePattern))), rule.Steps)).ToList();
+            CIPhaseFilterConfig config = deserializer.Deserialize<CIPhaseFilterConfig>(content);
+            List<(Regex, List<string>)> ruleList = config.Rules.Select(rule => (new Regex(string.Join("|", rule.Patterns.Select(ProcessSinglePattern))), rule.Phases)).ToList();
 
             DateTime startTime = DateTime.Now;
 
-            Dictionary<string, HashSet<string>> influencedModuleInfo = CalculateModuleNameForEachStep(ruleList, csprojMap);
+            Dictionary<string, HashSet<string>> influencedModuleInfo = CalculateInfluencedModuleInfoForEachPhase(ruleList, csprojMap);
             DateTime endOfRegularExpressionTime = DateTime.Now;
 
             influencedModuleInfo = CalculateCsprojForBuildAndTest(influencedModuleInfo, csprojMap);
             DateTime endTime = DateTime.Now;
             Serilog.Log.Information(string.Format("Takes {0} seconds for RE match, {1} seconds for phase config.", (endOfRegularExpressionTime - startTime).TotalSeconds, (endTime - endOfRegularExpressionTime).TotalSeconds));
             
-            FilterTaskResult.Step = influencedModuleInfo;
+            FilterTaskResult.PhaseInfo = influencedModuleInfo;
 
             return true;
         }
@@ -401,7 +403,7 @@ namespace Microsoft.WindowsAzure.Build.Tasks
 
             var csprojMap = ReadMapFile(CsprojMapFilePath, "CsprojMapFilePath");
 
-            Serilog.Log.Debug(string.Format("FilesChanged: {0}", FilesChanged.Length));
+            Serilog.Log.Information(string.Format("FilesChanged: {0}", FilesChanged.Length));
             if (FilesChanged != null && FilesChanged.Length > 0)
             {
                 return ProcessFileChanged(csprojMap);
