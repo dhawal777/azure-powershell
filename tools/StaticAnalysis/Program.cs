@@ -170,7 +170,7 @@ namespace StaticAnalysis
                 }
 
                 analysisLogger.WriteReports();
-                analysisLogger.CheckForIssues(2);
+                //analysisLogger.CheckForIssues(2);
             }
             finally
             {

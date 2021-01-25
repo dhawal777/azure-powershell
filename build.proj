@@ -109,11 +109,11 @@
   </Target>
 
   <Target Name="FilterBuild" Condition="$(PullRequestNumber) != '' OR $(TargetModule) != ''">
-    <!-- <Message Importance="high" Text="Filtering projects and modules..." />
-    <Exec Command="$(PowerShellCoreCommandPrefix) &quot;. $(RepoTools)/CreateFilterMappings.ps1&quot;" /> -->
+    <Message Importance="high" Text="Filtering projects and modules..." />
+    <Exec Command="$(PowerShellCoreCommandPrefix) &quot;. $(RepoTools)/CreateFilterMappings.ps1&quot;" />
 
     <!-- Build the Microsoft.Azure.Build.Tasks project -->
-    <!-- <Exec Command="dotnet publish $(RepoTools)BuildPackagesTask/Microsoft.Azure.Build.Tasks/Microsoft.Azure.Build.Tasks.csproj -c $(Configuration) -f netstandard2.0" /> -->
+    <Exec Command="dotnet publish $(RepoTools)BuildPackagesTask/Microsoft.Azure.Build.Tasks/Microsoft.Azure.Build.Tasks.csproj -c $(Configuration) -f netstandard2.0" />
 
     <!-- Get all of the files changed in the given pull request -->
     <FilesChangedTask RepositoryOwner="Azure" RepositoryName="azure-powershell" PullRequestNumber="$(PullRequestNumber)" TargetModule="$(TargetModule)">
