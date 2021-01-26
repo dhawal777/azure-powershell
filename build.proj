@@ -167,7 +167,7 @@
     <CallTarget Targets="Installer" Condition="$(SubTasks.Contains('installer'))" />
   </Target>
 
-  <Target Name="BuildNormalModules" DependsOnTargets="Build" Condition="$(IsBuildListEmpty) != 0" >
+  <Target Name="BuildNormalModules">
     <ItemGroup Condition="$(PullRequestNumber) == '' AND $(TargetModule) == ''">
       <CsprojFiles Include="$(RepoRoot)src/**/*.csproj" Exclude="$(RepoRoot)src/**/*.Test.csproj;$(RepoRoot)src/**/Authenticators.csproj" />
       <CsprojFiles Include="$(RepoRoot)src/**/*.Test.csproj" Exclude="$(Net472TestExclude)" Condition="'$(Configuration)' != 'Release' and '$(TestsToRun)' == 'All'" />
