@@ -110,7 +110,7 @@ namespace StaticAnalysis
                     Console.WriteLine(string.Format("Module: {0}", moduleName));
                 }
 
-
+                bool needToCheckIssue = false;
                 if (args.Any(a => a == "--analyzers"))
                 {
                     int idx = Array.FindIndex(args, a => a == "--analyzers");
@@ -138,6 +138,10 @@ namespace StaticAnalysis
                         {
                             Analyzers.Add(new HelpAnalyzer.HelpAnalyzer());
                         }
+                        if (analyzerName.ToLower().Equals("check-error"))
+                        {
+                            needToCheckIssue = true;
+                        }
                     }
                 }
                 else
@@ -146,6 +150,7 @@ namespace StaticAnalysis
                     Analyzers.Add(new DependencyAnalyzer.DependencyAnalyzer());
                     Analyzers.Add(new SignatureVerifier.SignatureVerifier());
                     Analyzers.Add(new HelpAnalyzer.HelpAnalyzer());
+                    needToCheckIssue = true;
                 }
 
                 // https://stackoverflow.com/a/9737418/294804
@@ -170,6 +175,11 @@ namespace StaticAnalysis
                 }
 
                 analysisLogger.WriteReports();
+                if (needToCheckIssue)
+                {
+                    var analyzer = new IssueChecker.IssueChecker();
+                    analyzer.Analyze(new[] { reportsDirectory });
+                }
                 //analysisLogger.CheckForIssues(2);
             }
             finally
