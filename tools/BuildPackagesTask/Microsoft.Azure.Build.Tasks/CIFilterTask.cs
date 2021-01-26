@@ -296,7 +296,8 @@ namespace Microsoft.WindowsAzure.Build.Tasks
                     }
                 }
             }
-            foreach (string phaseName in influencedModuleInfo.Keys)
+            var keys = influencedModuleInfo.Keys.ToList();
+            foreach (string phaseName in keys)
             {
                 if (influencedModuleInfo[phaseName].Contains(AllModule))
                 {
@@ -318,7 +319,8 @@ namespace Microsoft.WindowsAzure.Build.Tasks
          */
         private Dictionary<string, HashSet<string>> CalculateCsprojForBuildAndTest(Dictionary<string, HashSet<string>> influencedModuleInfo, Dictionary<string, string[]> csprojMap)
         {
-            foreach (string phaseName in influencedModuleInfo.Keys)
+            var keys = influencedModuleInfo.Keys.ToList();
+            foreach (string phaseName in keys)
             {
                 if (phaseName.Equals(BUILD_PHASE))
                 {
