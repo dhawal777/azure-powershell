@@ -300,7 +300,7 @@ namespace Microsoft.WindowsAzure.Build.Tasks
             {
                 if (influencedModuleInfo[phaseName].Contains(AllModule))
                 {
-                    influencedModuleInfo[phaseName] = new HashSet<string>(GetDependenceModuleList(AllModule, csprojMap));
+                    influencedModuleInfo[phaseName] = new HashSet<string>(GetDependenceModuleList("Accounts", csprojMap));
                 }
             }
             Serilog.Log.Information("----------------- InfluencedModuleInfo -----------------");
